@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة امتحانات كلية الحقوق - QCM التفاعلية</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #3b82f6;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #0f172a;
+            --success: #059669;
+            --error: #dc2626;
+            --light-success: #d1fae5;
+            --light-error: #fee2e2;
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; align-items: center; }
+        .app-container { background: var(--card); width: 100%; max-width: 800px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 30px; position: relative; overflow: hidden; }
+        .header { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+        .header h1 { color: var(--primary); margin: 0; font-size: 26px; font-weight: 800; }
+        
+        /* شاشة اختيار المادة */
+        #subject-selection { display: flex; flex-direction: column; gap: 12px; }
+        .subject-btn { background: #f1f5f9; border: 2px solid #cbd5e1; padding: 16px; border-radius: 12px; font-size: 18px; font-weight: 700; color: var(--primary); cursor: pointer; transition: 0.2s; text-align: center; }
+        .subject-btn:hover { border-color: var(--secondary); background: #e0f2fe; transform: scale(1.01); }
+        .all-btn { background: var(--primary); color: white; border: none; margin-top: 10px; }
+        .all-btn:hover { background: var(--secondary); }
+
+        /* شاشة الامتحان */
+        #quiz-screen { display: none; }
+        .progress-bar { width: 100%; background: #e2e8f0; border-radius: 10px; height: 12px; margin-bottom: 20px; overflow: hidden;}
+        .progress-fill { background: var(--secondary); height: 100%; width: 0%; transition: 0.4s ease-out; }
+        .stats { display: flex; justify-content: space-between; font-size: 15px; color: #475569; margin-bottom: 20px; font-weight: bold; border-bottom: 1px dashed #cbd5e1; padding-bottom: 10px;}
+        #question-text { font-size: 22px; line-height: 1.6; margin-bottom: 25px; color: #1e293b; font-weight: 700; }
+        
+        .options-grid { display: flex; flex-direction: column; gap: 12px; }
+        .option-btn { background: white; border: 2px solid #cbd5e1; padding: 16px 20px; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; text-align: right; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; color: #334155; }
+        .option-btn:hover:not(:disabled) { border-color: var(--secondary); background: #f8fafc; }
+        .option-btn:disabled { cursor: default; }
+        
+        /* التغذية الراجعة (التصحيح المباشر) */
+        .option-btn.correct { background: var(--light-success); border-color: var(--success); color: var(--success); }
+        .option-btn.wrong { background: var(--light-error); border-color: var(--error); color: var(--error); }
+        .icon { font-size: 22px; }
+
+        #next-btn { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 25px; transition: 0.3s; display: none; }
+        #next-btn:hover { background: var(--secondary); transform: translateY(-2px); }
+        
+        /* شاشة النتيجة */
+        #result-screen { display: none; text-align: center; }
+        .score-circle { width: 160px; height: 160px; border-radius: 50%; border: 10px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900; color: var(--primary); margin: 0 auto 25px; }
+        .btn-restart { background: var(--secondary); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-restart:hover { background: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <h1>المنصة الذكية للتحضير للامتحانات - QCM</h1>
+    </div>
+
+    <!-- شاشة اختيار المادة -->
+    <div id="subject-selection">
+        <h3 style="text-align: center; color: #475569; margin-top:0;">اختر المادة لاجتياز الاختبار:</h3>
+        <button class="subject-btn" onclick="startQuiz('law')">المدخل للعلوم القانونية والقانون الوضعي</button>
+        <button class="subject-btn" onclick="startQuiz('sharia')">الشريعة الإسلامية</button>
+        <button class="subject-btn" onclick="startQuiz('international')">العلاقات الدولية</button>
+        <button class="subject-btn" onclick="startQuiz('economics')">العلوم الاقتصادية والتدبير</button>
+        <button class="subject-btn" onclick="startQuiz('politics')">علم السياسة</button>
+        <button class="subject-btn all-btn" onclick="startQuiz('all')">اختبار شامل (تحدي جميع المواد)</button>
+    </div>
+
+    <!-- شاشة الامتحان -->
+    <div id="quiz-screen">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="stats">
+            <span id="question-counter">السؤال 1 من 10</span>
+            <span id="score-counter" style="color: var(--primary);">النقاط: 0</span>
+        </div>
+        <h2 id="question-text">جاري التحميل...</h2>
+        <div class="options-grid" id="options-grid"></div>
+        <button id="next-btn" onclick="loadNextQuestion()">السؤال الموالي ➔</button>
+    </div>
+
+    <!-- شاشة النتيجة -->
+    <div id="result-screen">
+        <h2 style="color: var(--primary); font-size: 28px;">اكتمل الاختبار!</h2>
+        <div class="score-circle" id="final-score">0%</div>
+        <p id="feedback-msg" style="font-size: 20px; color: #475569; margin-bottom: 30px; line-height: 1.5;"></p>
+        <button class="btn-restart" onclick="location.reload()">العودة للقائمة الرئيسية 🏠</button>
+    </div>
+</div>
+
+<script>
+    // قاعدة البيانات الضخمة المستخرجة حصريا من ملفات الـ PDF المرفقة
+    const allQuestions = [
+        // ================= المدخل للقانون والقانون الوضعي =================
+        {
+            subject: 'law',
+            question: "ما هو التعريف الدقيق للقانون بمعناه الضيق؟",
+            options: [
+                "كل قاعدة ثابتة تفيد استمرار أمر معين وفق نظام ثابت",
+                "مجموعة القواعد الملزمة التي تصدرها السلطة التشريعية لتنظيم علاقات الأفراد ببعضهم أو بالدولة",
+                "مجموعة القواعد التي تفرضها العادات والتقاليد المجتمعية فقط",
+                "القواعد التي تضعها السلطة القضائية للفصل في النزاعات"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'law',
+            question: "من خصائص القاعدة القانونية أنها قاعدة 'عامة ومجردة'، ماذا يعني التجريد هنا؟",
+            options: [
+                "أنها تطبق على الأشخاص بأسمائهم وذواتهم",
+                "أنها خالية من أي جزاء مادي",
+                "أن الحكم يطبق على كل شخص أو واقعة توافرت فيها الصفات والشروط المحددة في الفرض، دون تحديد لذات معينة",
+                "أنها تطبق فقط على الموظفين العموميين"
+            ],
+            answer: 2
+        },
+        {
+            subject: 'law',
+            question: "ما هو المعيار اللفظي (الشكلي) لتمييز القاعدة القانونية الآمرة؟",
+            options: [
+                "أن تحتوي على عبارة 'ما لم يوجد اتفاق يقضي بغير ذلك'",
+                "أن تحتوي على ألفاظ تدل على عدم جواز المخالفة مثل 'يقع باطلاً كل اتفاق مخالف' أو 'لا يجوز'",
+                "أن تكون متعلقة بمصالح الأفراد المالية فقط",
+                "أن تكون صادرة عن السلطة التنفيذية"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'law',
+            question: "إلى ماذا ينقسم القانون العام؟",
+            options: [
+                "قانون مدني وقانون تجاري",
+                "قانون عام خارجي (ينظم العلاقات بين الدول) وقانون عام داخلي (الدستوري، الإداري، المالي، الجنائي)",
+                "قواعد موضوعية وقواعد شكلية",
+                "قانون الشغل وقانون الأسرة"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'law',
+            question: "ما هو التشريع الأساسي في الدولة؟",
+            options: [
+                "التشريع العادي الصادر عن البرلمان",
+                "المراسيم والقرارات الصادرة عن الحكومة",
+                "الدستور، وهو أسمى قانون يحدد شكل الدولة ونظام الحكم فيها والسلطات العامة",
+                "الاجتهاد القضائي الصادر عن محكمة النقض"
+            ],
+            answer: 2
+        },
+        {
+            subject: 'law',
+            question: "يعتبر العرف مصدراً من مصادر القانون، ما هو ركنه المعنوي؟",
+            options: [
+                "تكرار السلوك في مسألة معينة لمدة طويلة",
+                "كتابة العادة وتدوينها في سجلات رسمية",
+                "اعتقاد الناس وشعورهم بإلزامية العادة وأن مخالفتها تستتبع جزاءً قانونياً",
+                "اعتماد القاضي عليه في المحكمة فقط"
+            ],
+            answer: 2
+        },
+
+        // ================= الشريعة الإسلامية =================
+        {
+            subject: 'sharia',
+            question: "من مقاصد الشريعة الإسلامية الحفاظ على 'الكليات الخمس'، ما هي؟",
+            options: [
+                "الصلاة، الزكاة، الصوم، الحج، والشهادتان",
+                "الدين، النفس، العقل، النسل، والمال",
+                "التشريع، التنفيذ، القضاء، الإدارة، والاقتصاد",
+                "الكتاب، السنة، الإجماع، القياس، والاجتهاد"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'sharia',
+            question: "ما هو 'الإجماع السكوتي' في أصول الفقه؟",
+            options: [
+                "أن يصمت الفقيه ولا يجيب على السائل",
+                "أن يقول بعض المجتهدين رأياً ويعمم، فيسكت الآخرون ولم يوافقوا صراحة ولم يعارضوا مع عدم وجود مانع",
+                "اتفاق عوام الناس على ترك أمر معين",
+                "إجماع الصحابة دون التابعين"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'sharia',
+            question: "تتكون أركان القياس في الشريعة الإسلامية من أربعة أركان أساسية، وهي:",
+            options: [
+                "الإيجاب، القبول، العاقدان، المحل",
+                "الكتاب، السنة، الإجماع، الاجتهاد",
+                "الأصل، الفرع، الحكم، والعلة (الوصف المشترك)",
+                "الوضوح، الشمولية، الثبات، الواقعية"
+            ],
+            answer: 2
+        },
+        {
+            subject: 'sharia',
+            question: "ما هي الخاصية التي تعني أن الشريعة صالحة لكل زمان ومكان ولجميع البشر؟",
+            options: [
+                "الربانية",
+                "الشمولية (عالمية الخطاب)",
+                "الوضوح",
+                "الواقعية"
+            ],
+            answer: 1
+        },
+
+        // ================= العلاقات الدولية =================
+        {
+            subject: 'international',
+            question: "متى تم توقيع معاهدة وستفاليا التي وضعت أسس النظام الدولي الحديث؟",
+            options: [
+                "1945 ميلادية",
+                "1648 ميلادية",
+                "1789 ميلادية",
+                "1914 ميلادية"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'international',
+            question: "ما هي العناصر المادية الثلاثة الضرورية لقيام الدولة في القانون الدولي؟",
+            options: [
+                "السيادة، الاعتراف الدولي، والجيش",
+                "الدستور، البرلمان، والحكومة",
+                "الشعب (السكان)، الإقليم، والسلطة السياسية الحاكمة",
+                "المجال الجوي، المجال البحري، والمجال البري"
+            ],
+            answer: 2
+        },
+        {
+            subject: 'international',
+            question: "حسب قانون البحار، كم يبلغ عرض المنطقة الاقتصادية الخالصة (Zone économique exclusive)؟",
+            options: [
+                "12 ميلاً بحرياً",
+                "188 ميلاً بحرياً (المساحة الفاصلة بين البحر الإقليمي وأعالي البحار)",
+                "200 ميل بحري من أعالي البحار",
+                "300 ميل بحري"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'international',
+            question: "في نظريات الاعتراف بالدولة، ماذا تعني 'نظرية الاعتراف المقر' (Déclaratif)؟",
+            options: [
+                "أن الاعتراف هو الذي ينشئ الدولة ويخلق شخصيتها القانونية",
+                "أن الدولة موجودة بتوافر عناصرها الثلاث، والاعتراف مجرد إقرار قانوني لمركز فعلي سابق",
+                "أن الاعتراف يصدر عن الأمم المتحدة فقط",
+                "أن الاعتراف يكون مؤقتاً وقابلاً للسحب في أي وقت"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'international',
+            question: "بعد نهاية الحرب الباردة، برزت أطروحة تعتبر أن النزاعات القادمة ستكون ثقافية، من هو رائد أطروحة 'صراع الحضارات'؟",
+            options: [
+                "فرانسيس فوكوياما",
+                "صامويل هانتنغتون",
+                "هنري كيسنجر",
+                "ليندا رايس"
+            ],
+            answer: 1
+        },
+
+        // ================= العلوم الاقتصادية والتدبير =================
+        {
+            subject: 'economics',
+            question: "كيف عرّف الاقتصادي 'بول سامويلسن' علم الاقتصاد؟",
+            options: [
+                "العلم الذي يدرس حصول الأمة على الثروة المادية فقط",
+                "العلم الذي يدرس كيفية استخدام المجتمعات لمواردها النادرة لإنتاج سلع قيمة وتوزيعها",
+                "علم يختص بزيادة صادرات الدولة مقابل وارداتها",
+                "دراسة السلوك الإنساني لتحقيق الربح الفردي فقط"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'economics',
+            question: "حسب قانون الطلب، ما هي العلاقة بين السعر والكمية المطلوبة؟",
+            options: [
+                "علاقة طردية (كلما زاد السعر زاد الطلب)",
+                "علاقة عكسية (كلما زاد السعر انخفضت الكمية المطلوبة)",
+                "لا توجد علاقة بينهما",
+                "الطلب يتأثر بالذوق فقط ولا يتأثر بالسعر"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'economics',
+            question: "ما هو 'ثمن التوازن' في سوق المنافسة؟",
+            options: [
+                "السعر الذي تحدده الدولة إجبارياً",
+                "نقطة تقاطع منحنى الطلب مع منحنى العرض (تساوي الكمية المطلوبة مع المعروضة)",
+                "أقل سعر يمكن للمنتج أن يبيع به سلعته",
+                "أعلى سعر يقبل المشتري دفعه"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'economics',
+            question: "ما هي المبادئ الأساسية التي دافعت عنها 'المدرسة الطبيعية' (الفيزيوقراط)؟",
+            options: [
+                "التجارة الخارجية هي المصدر الوحيد للثروة",
+                "تدخل الدولة المباشر في توجيه الاقتصاد",
+                "العمل الزراعي هو العمل المنتج الوحيد القادر على إعطاء ناتج صافٍ، وترك الأمور تسير بتلقائية (دعه يعمل)",
+                "الملكية الجماعية لوسائل الإنتاج"
+            ],
+            answer: 2
+        },
+        {
+            subject: 'economics',
+            question: "في نظريات التدبير الحديثة، ماذا تفترض 'نظرية X' لماك جريجور حول العامل؟",
+            options: [
+                "أن العامل طموح ويحب تحمل المسؤولية ويبحث عن الإبداع",
+                "أن العامل كسول بطبعه، يتهرب من العمل والمسؤولية، ويحتاج للرقابة والتهديد والعقاب",
+                "أن الحوافز المعنوية هي المحرك الأساسي للعامل",
+                "أن العمال يشكلون فريقاً منسجماً تلقائياً"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'economics',
+            question: "حسب 'إبراهام ماسلو'، ما هي الحاجات التي تقع في قاعدة هرم الحاجات الإنسانية؟",
+            options: [
+                "الحاجة لتحقيق الذات",
+                "حاجات الانتماء الاجتماعي والحب",
+                "حاجات التقدير والاحترام",
+                "الحاجات الفسيولوجية (الطعام، الشراب، الراحة)"
+            ],
+            answer: 3
+        },
+
+        // ================= علم السياسة =================
+        {
+            subject: 'politics',
+            question: "يختلف المختصون في تحديد موضوع علم السياسة بين منظورين أساسيين، هما:",
+            options: [
+                "منظور يعتبره علم الاقتصاد ومنظور يعتبره علم الاجتماع",
+                "منظور قانوني يعتبره 'علم الدولة' ومنظور سوسيولوجي يعتبره 'علم السلطة'",
+                "منظور يعتبره علم الأخلاق ومنظور يعتبره علم الفلسفة",
+                "منظور تاريخي ومنظور جغرافي"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'politics',
+            question: "في المقاربة النسقية لدافيد إيستون، كيف يتم التفاعل بين النسق السياسي ومحيطه؟",
+            options: [
+                "عن طريق القوة العسكرية فقط",
+                "عبر المدخلات (مطالب ودعم) والمخرجات (قرارات وأفعال) تربطها حلقة التغذية المرتدة (Feed-Back)",
+                "عبر الانتخابات البرلمانية حصرياً",
+                "عن طريق الوظائف الثقافية المعزولة عن الاقتصاد"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'politics',
+            question: "ماذا يقصد دافيد إيستون بـ 'التغذية المرتدة' (Feed-Back) في النسق السياسي؟",
+            options: [
+                "تقديم الرشاوى لتمرير القوانين",
+                "حلقة من التصرفات تمثل ردود أفعال المحيط على القرارات، وتغذي المنظومة بالمعلومات لتقويم وتصحيح مسارها",
+                "رفض المحيط لأي قرار سياسي",
+                "انقطاع التواصل بين الحكومة والشعب"
+            ],
+            answer: 1
+        },
+        {
+            subject: 'politics',
+            question: "في مراجعة روبرت ميرتون للمدرسة الوظيفية، فرّق بين نوعين من الوظائف:",
+            options: [
+                "وظائف دستورية ووظائف إدارية",
+                "وظائف شرعية ووظائف غير شرعية",
+                "وظائف ظاهرة (مقصودة ومعلنة) ووظائف خفية (غير معلنة ولا تدرك بشكل مباشر)",
+                "وظائف سياسية ووظائف اقتصادية"
+            ],
+            answer: 2
+        },
+        {
+            subject: 'politics',
+            question: "تعتمد المقاربة السبرانية لكارل دويتش على تحليل المنظومة السياسية كأنها:",
+            options: [
+                "كائن حي بيولوجي يمرض ويموت",
+                "آلية ناظمة (Servomécanisme) ذاتية الدفع والتوجيه تعتمد على تدفق المعلومات وتصحيح المسار (الفارق، الاستجابة)",
+                "شركة تجارية تهدف للربح المادي",
+                "بنية طبقية متصارعة"
+            ],
+            answer: 1
+        }
+    ];
+
+    let currentQuestions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    // عناصر واجهة المستخدم
+    const subjectScreen = document.getElementById('subject-selection');
+    const quizScreen = document.getElementById('quiz-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const questionText = document.getElementById('question-text');
+    const optionsGrid = document.getElementById('options-grid');
+    const nextBtn = document.getElementById('next-btn');
+    const progressFill = document.getElementById('progress-fill');
+    const questionCounter = document.getElementById('question-counter');
+    const scoreCounter = document.getElementById('score-counter');
+
+    // دالة لخلط المصفوفات (الأسئلة والخيارات)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // بدء الاختبار
+    function startQuiz(subject) {
+        if (subject === 'all') {
+            currentQuestions = shuffleArray([...allQuestions]);
+        } else {
+            currentQuestions = shuffleArray(allQuestions.filter(q => q.subject === subject));
+        }
+        
+        currentQuestionIndex = 0;
+        score = 0;
+        
+        subjectScreen.style.display = 'none';
+        quizScreen.style.display = 'block';
+        
+        loadQuestion();
+    }
+
+    // تحميل السؤال
+    function loadQuestion() {
+        nextBtn.style.display = 'none';
+        optionsGrid.innerHTML = '';
+        
+        const currentQ = currentQuestions[currentQuestionIndex];
+        questionText.innerText = currentQ.question;
+        
+        // تحديث العدادات وشريط التقدم
+        questionCounter.innerText = `السؤال ${currentQuestionIndex + 1} من ${currentQuestions.length}`;
+        scoreCounter.innerText = `النقاط: ${score}`;
+        const progress = ((currentQuestionIndex) / currentQuestions.length) * 100;
+        progressFill.style.width = `${progress}%`;
+
+        // ترتيب الخيارات عشوائياً مع الاحتفاظ بالرقم الأصلي للجواب الصحيح
+        let optionsWithIndex = currentQ.options.map((opt, index) => ({ text: opt, originalIndex: index }));
+        optionsWithIndex = shuffleArray(optionsWithIndex);
+
+        optionsWithIndex.forEach((optObj) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerHTML = `<span>${optObj.text}</span> <span class="icon"></span>`;
+            
+            // إضافة حدث النقر
+            btn.onclick = () => checkAnswer(btn, optObj.originalIndex, currentQ.answer, optionsWithIndex);
+            optionsGrid.appendChild(btn);
+        });
+    }
+
+    // التحقق من الجواب (هنا يكمن التحدي الذي طلبته)
+    function checkAnswer(clickedBtn, selectedOriginalIndex, correctOriginalIndex, currentOptionsData) {
+        const allBtns = optionsGrid.querySelectorAll('.option-btn');
+        
+        // بمجرد النقر، يتم تعطيل جميع الأزرار لمنع النقر المتعدد
+        allBtns.forEach(b => b.disabled = true);
+
+        if (selectedOriginalIndex === correctOriginalIndex) {
+            // الجواب صحيح: تلوين الزر بالأخضر
+            clickedBtn.classList.add('correct');
+            clickedBtn.querySelector('.icon').innerText = '✔️';
+            score++;
+            scoreCounter.innerText = `النقاط: ${score}`;
+        } else {
+            // الجواب خاطئ: تلوين الزر الذي نقر عليه بالأحمر
+            clickedBtn.classList.add('wrong');
+            clickedBtn.querySelector('.icon').innerText = '❌';
+            
+            // في نفس اللحظة، البحث عن الجواب الصحيح وتلوينه بالأخضر لكي يتعلم الطالب
+            allBtns.forEach((btn, idx) => {
+                if (currentOptionsData[idx].originalIndex === correctOriginalIndex) {
+                    btn.classList.add('correct');
+                    btn.querySelector('.icon').innerText = '✔️';
+                }
+            });
+        }
+        
+        // إظهار زر المرور للسؤال التالي
+        nextBtn.style.display = 'block';
+        if(currentQuestionIndex === currentQuestions.length - 1) {
+            nextBtn.innerText = "عرض النتيجة النهائية 🏆";
+        }
+    }
+
+    // المرور للسؤال الموالي
+    function loadNextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < currentQuestions.length) {
+            loadQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    // عرض النتيجة النهائية
+    function showResults() {
+        quizScreen.style.display = 'none';
+        resultScreen.style.display = 'block';
+        
+        const percentage = Math.round((score / currentQuestions.length) * 100);
+        const scoreCircle = document.getElementById('final-score');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        
+        scoreCircle.innerText = `${percentage}%`;
+        
+        if(percentage >= 80) {
+            scoreCircle.style.borderColor = "var(--success)";
+            scoreCircle.style.color = "var(--success)";
+            feedbackMsg.innerHTML = `<strong>ممتاز جداً!</strong><br> أجبت بشكل صحيح على ${score} من أصل ${currentQuestions.length} أسئلة.<br>أنت مستعد تماماً لاجتياز الامتحان بنجاح.`;
+        } else if(percentage >= 50) {
+            scoreCircle.style.borderColor = "#eab308";
+            scoreCircle.style.color = "#eab308";
+            feedbackMsg.innerHTML = `<strong>مستوى لا بأس به.</strong><br> أجبت بشكل صحيح على ${score} من أصل ${currentQuestions.length} أسئلة.<br>تحتاج إلى مراجعة بعض المحاور لضمان التفوق.`;
+        } else {
+            scoreCircle.style.borderColor = "var(--error)";
+            scoreCircle.style.color = "var(--error)";
+            feedbackMsg.innerHTML = `<strong>انتبه!</strong><br> أجبت بشكل صحيح على ${score} من أصل ${currentQuestions.length} أسئلة فقط.<br>يجب عليك العودة للمحاضرات ومراجعة الدروس بتركيز أكبر.`;
+        }
+    }
+</script>
+
+</body>
+</html>
